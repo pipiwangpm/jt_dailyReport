@@ -4,5 +4,6 @@ node_modules/
 
 # Local runtime data and secrets
 data/local-config.json
+data/dingtalk-stream-config.json
 data/daily-records.json
 data/reports.json

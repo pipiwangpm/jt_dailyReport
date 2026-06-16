@@ -5,10 +5,11 @@ const path = require("path");
 const PORT = Number(process.env.PORT || 4173);
 const ROOT = __dirname;
 const PROTOTYPE_DIR = path.join(ROOT, "prototype");
-const DATA_FILE = path.join(ROOT, "data", "daily-records.json");
-const REPORTS_FILE = path.join(ROOT, "data", "reports.json");
-const PROJECT_KB_FILE = path.join(ROOT, "data", "project-kb.json");
-const LOCAL_CONFIG_FILE = path.join(ROOT, "data", "local-config.json");
+const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, "data");
+const DATA_FILE = path.join(DATA_DIR, "daily-records.json");
+const REPORTS_FILE = path.join(DATA_DIR, "reports.json");
+const PROJECT_KB_FILE = path.join(DATA_DIR, "project-kb.json");
+const LOCAL_CONFIG_FILE = path.join(DATA_DIR, "local-config.json");
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -168,6 +169,18 @@ function recordFromCandidate(candidate, records) {
     includeInReport: candidate.includeInReport !== false,
     createdAt: nowISO(),
   };
+}
+
+function ingestText(text, source = "当前对话") {
+  const records = readRecords();
+  const candidates = parseInput(text, source);
+  const created = candidates.filter((item) => item && item.title).map((item) => {
+    const record = recordFromCandidate(item, records);
+    records.push(record);
+    return record;
+  });
+  writeRecords(records);
+  return { candidates, created, records };
 }
 
 function stripTomorrow(title) {
@@ -377,6 +390,18 @@ async function handleApi(req, res) {
     return;
   }
 
+  if (req.method === "POST" && url.pathname === "/api/ingest") {
+    const body = await readJsonBody(req);
+    const text = dingtalkTextFromBody(body) || body.rawText || "";
+    if (!text.trim()) {
+      sendJson(res, 400, { error: "请输入要记录的内容。" });
+      return;
+    }
+    const result = ingestText(text, body.source || "当前对话");
+    sendJson(res, 201, result);
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/api/records") {
     const body = await readJsonBody(req);
     const records = readRecords();
@@ -449,8 +474,12 @@ async function handleApi(req, res) {
   if (req.method === "POST" && url.pathname === "/api/dingtalk/incoming") {
     const body = await readJsonBody(req);
     const text = dingtalkTextFromBody(body);
-    const candidates = parseInput(text, "钉钉机器人");
-    sendJson(res, 200, { candidates, message: "钉钉消息已解析，公网回调联调后可自动入库。" });
+    if (!text.trim()) {
+      sendJson(res, 400, { error: "未识别到钉钉消息文本。" });
+      return;
+    }
+    const result = ingestText(text, "钉钉机器人");
+    sendJson(res, 201, { ...result, message: "钉钉消息已入库。" });
     return;
   }
 

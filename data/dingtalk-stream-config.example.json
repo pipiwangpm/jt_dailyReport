@@ -1,0 +1,6 @@
+{
+  "clientId": "your-client-id",
+  "clientSecret": "your-client-secret",
+  "localIngestUrl": "http://127.0.0.1:4173/api/ingest",
+  "debug": false
+}
