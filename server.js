@@ -6,6 +6,7 @@ const PORT = Number(process.env.PORT || 4173);
 const ROOT = __dirname;
 const PROTOTYPE_DIR = path.join(ROOT, "prototype");
 const DATA_FILE = path.join(ROOT, "data", "daily-records.json");
+const REPORTS_FILE = path.join(ROOT, "data", "reports.json");
 const PROJECT_KB_FILE = path.join(ROOT, "data", "project-kb.json");
 const LOCAL_CONFIG_FILE = path.join(ROOT, "data", "local-config.json");
 
@@ -41,6 +42,10 @@ function readRecords() {
   return JSON.parse(raw || "[]");
 }
 
+function readReports() {
+  return readJsonFile(REPORTS_FILE, []);
+}
+
 function readJsonFile(filePath, fallback) {
   if (!fs.existsSync(filePath)) return fallback;
   const raw = fs.readFileSync(filePath, "utf8");
@@ -72,6 +77,11 @@ function normalizeDingtalkConfig(config) {
 function writeRecords(records) {
   fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
   fs.writeFileSync(DATA_FILE, `${JSON.stringify(records, null, 2)}\n`);
+}
+
+function writeReports(reports) {
+  fs.mkdirSync(path.dirname(REPORTS_FILE), { recursive: true });
+  fs.writeFileSync(REPORTS_FILE, `${JSON.stringify(reports, null, 2)}\n`);
 }
 
 function nextId(records, date) {
@@ -187,6 +197,46 @@ ${todoLines}
 2. 需协调：${risk.coordination || "暂无"}】`;
 }
 
+function buildRecordSummary(records) {
+  return records.reduce((summary, item) => {
+    const date = item.date || todayISO();
+    if (!summary[date]) summary[date] = { total: 0, done: 0, todo: 0 };
+    summary[date].total += 1;
+    if (item.status === "已完成") summary[date].done += 1;
+    if (item.status === "待办") summary[date].todo += 1;
+    return summary;
+  }, {});
+}
+
+function buildReportSummary(reports) {
+  return reports.reduce((summary, item) => {
+    const date = item.date || todayISO();
+    if (!summary[date]) summary[date] = { total: 0, sent: 0 };
+    summary[date].total += 1;
+    if (item.sentAt) summary[date].sent += 1;
+    return summary;
+  }, {});
+}
+
+function upsertReport({ type = "daily", date = todayISO(), content, risk = {} }) {
+  const reports = readReports();
+  const existingIndex = reports.findIndex((item) => item.type === type && item.date === date);
+  const report = {
+    id: existingIndex >= 0 ? reports[existingIndex].id : `${date}-${type}`,
+    type,
+    date,
+    content: content || buildReport(type, date, risk),
+    risk,
+    updatedAt: nowISO(),
+    createdAt: existingIndex >= 0 ? reports[existingIndex].createdAt : nowISO(),
+    sentAt: existingIndex >= 0 ? reports[existingIndex].sentAt : null,
+  };
+  if (existingIndex >= 0) reports[existingIndex] = report;
+  else reports.push(report);
+  writeReports(reports);
+  return { report, reports };
+}
+
 function dingtalkTextFromBody(body) {
   if (typeof body.text === "string") return body.text;
   if (body.text && typeof body.text.content === "string") return body.text.content;
@@ -299,7 +349,14 @@ async function handleApi(req, res) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/records") {
-    sendJson(res, 200, { records: readRecords() });
+    const date = url.searchParams.get("date");
+    const records = readRecords();
+    sendJson(res, 200, { records: date ? records.filter((item) => item.date === date) : records });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/records/summary") {
+    sendJson(res, 200, { summary: buildRecordSummary(readRecords()) });
     return;
   }
 
@@ -334,6 +391,29 @@ async function handleApi(req, res) {
     return;
   }
 
+  if (req.method === "PUT" && url.pathname.startsWith("/api/records/")) {
+    const id = decodeURIComponent(url.pathname.replace("/api/records/", ""));
+    const body = await readJsonBody(req);
+    const records = readRecords();
+    const index = records.findIndex((item) => item.id === id);
+    if (index < 0) {
+      sendJson(res, 404, { error: "记录不存在" });
+      return;
+    }
+    records[index] = {
+      ...records[index],
+      title: body.title || records[index].title,
+      project: body.project || records[index].project,
+      status: body.status || records[index].status,
+      date: body.date || records[index].date,
+      includeInReport: body.includeInReport !== undefined ? Boolean(body.includeInReport) : records[index].includeInReport,
+      updatedAt: nowISO(),
+    };
+    writeRecords(records);
+    sendJson(res, 200, { record: records[index], records });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/report") {
     const type = url.searchParams.get("type") || "daily";
     const date = url.searchParams.get("date") || todayISO();
@@ -345,7 +425,24 @@ async function handleApi(req, res) {
     const body = await readJsonBody(req);
     const type = body.type || "daily";
     const date = body.date || todayISO();
-    sendJson(res, 200, { report: buildReport(type, date, body.risk || {}) });
+    const built = buildReport(type, date, body.risk || {});
+    const saved = body.save === false ? null : upsertReport({ type, date, content: built, risk: body.risk || {} }).report;
+    sendJson(res, 200, { report: built, saved });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/reports") {
+    const date = url.searchParams.get("date");
+    const type = url.searchParams.get("type");
+    let reports = readReports();
+    if (date) reports = reports.filter((item) => item.date === date);
+    if (type) reports = reports.filter((item) => item.type === type);
+    sendJson(res, 200, { reports });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/reports/summary") {
+    sendJson(res, 200, { summary: buildReportSummary(readReports()) });
     return;
   }
 
@@ -378,6 +475,14 @@ async function handleApi(req, res) {
         text: report,
       },
     });
+    if (result.statusCode >= 200 && result.statusCode < 300 && body.type && body.date) {
+      const reports = readReports();
+      const index = reports.findIndex((item) => item.type === body.type && item.date === body.date);
+      if (index >= 0) {
+        reports[index].sentAt = nowISO();
+        writeReports(reports);
+      }
+    }
     sendJson(res, result.statusCode >= 200 && result.statusCode < 300 ? 200 : 502, {
       ok: result.statusCode >= 200 && result.statusCode < 300,
       statusCode: result.statusCode,
