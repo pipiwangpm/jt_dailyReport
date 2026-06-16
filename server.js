@@ -111,8 +111,9 @@ function guessProject(text) {
 }
 
 function guessStatus(text) {
-  if (/明天|明日|待办|计划|需要|跟进|修改|调整|采购|部署|测试/.test(text)) return "待办";
+  if (/明天|明日|待办|计划|需要|跟进/.test(text)) return "待办";
   if (/完成|参加|参会|开会|评审|分享/.test(text)) return "已完成";
+  if (/修改|调整|采购|部署|测试/.test(text)) return "待办";
   return "已完成";
 }
 

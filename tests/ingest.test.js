@@ -64,8 +64,21 @@ test("POST /api/ingest parses and saves DingTalk text as records", async () => {
     assert.equal(body.created[0].source, "钉钉机器人");
     assert.equal(body.created[1].status, "待办");
 
+    const completedTestResponse = await fetch(`http://127.0.0.1:${PORT}/api/ingest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: "完成钉钉callback模式测试",
+        source: "钉钉机器人",
+      }),
+    });
+    assert.equal(completedTestResponse.status, 201);
+    const completedTestBody = await completedTestResponse.json();
+    assert.equal(completedTestBody.created[0].status, "已完成");
+    assert.equal(completedTestBody.created[0].date, "2026-06-16");
+
     const persisted = JSON.parse(fs.readFileSync(path.join(dataDir, "daily-records.json"), "utf8"));
-    assert.equal(persisted.length, 2);
+    assert.equal(persisted.length, 3);
   } finally {
     child.kill();
   }
