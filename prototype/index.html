@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>日常动作与日报助手 - 移动优先原型</title>
+    <style>
+      :root {
+        --bg: #f7f8fa;
+        --panel: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --line: #e5e7eb;
+        --blue: #2563eb;
+        --green: #168a57;
+        --amber: #a16207;
+        --red: #c2410c;
+        --radius: 8px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+          "Microsoft YaHei", sans-serif;
+      }
+
+      button,
+      textarea,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .app {
+        max-width: 920px;
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 14px 12px 76px;
+      }
+
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.3;
+      }
+
+      h2 {
+        margin: 0 0 10px;
+        font-size: 16px;
+      }
+
+      .subtitle {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .section {
+        display: none;
+      }
+
+      .section.active {
+        display: grid;
+        gap: 12px;
+      }
+
+      .panel,
+      .item,
+      .metric {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+      }
+
+      .panel {
+        padding: 14px;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .metric {
+        padding: 10px;
+        display: grid;
+        gap: 5px;
+      }
+
+      .metric strong {
+        font-size: 22px;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .small {
+        font-size: 12px;
+      }
+
+      textarea,
+      input,
+      select {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+        color: var(--text);
+        padding: 10px;
+      }
+
+      textarea {
+        min-height: 118px;
+        resize: vertical;
+        line-height: 1.6;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+        color: #374151;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .btn {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+        color: var(--text);
+        padding: 10px 12px;
+        cursor: pointer;
+      }
+
+      .btn.primary {
+        border-color: var(--blue);
+        background: var(--blue);
+        color: #fff;
+      }
+
+      .btn.full {
+        grid-column: 1 / -1;
+      }
+
+      .chips {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-size: 12px;
+        background: #fff;
+        white-space: nowrap;
+      }
+
+      .done {
+        background: #e9f8ef;
+        border-color: #bce8cb;
+        color: var(--green);
+      }
+
+      .todo {
+        background: #fff7e6;
+        border-color: #f4d08a;
+        color: var(--amber);
+      }
+
+      .risk {
+        background: #fff0e8;
+        border-color: #fdc7ad;
+        color: var(--red);
+      }
+
+      .candidate-list,
+      .record-list,
+      .more-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .item {
+        padding: 10px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .item-title {
+        font-weight: 650;
+        line-height: 1.45;
+      }
+
+      .report-preview {
+        min-height: 360px;
+        white-space: pre-line;
+        line-height: 1.75;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fbfcff;
+        padding: 12px;
+      }
+
+      .status-line {
+        min-height: 20px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .status-line.error {
+        color: var(--red);
+      }
+
+      .status-line.ok {
+        color: var(--green);
+      }
+
+      .segmented {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .segmented button.active {
+        border-color: var(--blue);
+        color: var(--blue);
+        background: #eef4ff;
+      }
+
+      details {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 10px;
+      }
+
+      summary {
+        cursor: pointer;
+        font-weight: 650;
+      }
+
+      details p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .bottom-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.96);
+        border-top: 1px solid var(--line);
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        padding: 8px 10px;
+        gap: 8px;
+      }
+
+      .bottom-nav button {
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--muted);
+        padding: 8px;
+        cursor: pointer;
+      }
+
+      .bottom-nav button.active {
+        background: #eef4ff;
+        color: var(--blue);
+        font-weight: 650;
+      }
+
+      @media (min-width: 760px) {
+        .app {
+          padding: 22px 18px 86px;
+        }
+
+        h1 {
+          font-size: 24px;
+        }
+
+        .desktop-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 0.9fr) minmax(340px, 1.1fr);
+          gap: 12px;
+        }
+
+        .bottom-nav {
+          left: 50%;
+          transform: translateX(-50%);
+          max-width: 920px;
+          border: 1px solid var(--line);
+          border-bottom: 0;
+          border-radius: 12px 12px 0 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <div class="topbar">
+        <div>
+          <h1 id="page-title">快速记录</h1>
+          <div id="page-subtitle" class="subtitle">
+            手机上也能用一句话记录完成项和待办。
+          </div>
+        </div>
+        <span class="chip done">今日</span>
+      </div>
+
+      <section class="section active" id="record">
+        <div class="metrics">
+          <div class="metric"><span class="muted small">今日进展</span><strong id="done-count">0</strong></div>
+          <div class="metric"><span class="muted small">明日计划</span><strong id="todo-count">0</strong></div>
+          <div class="metric"><span class="muted small">待确认</span><strong id="candidate-count">0</strong></div>
+        </div>
+
+        <div class="desktop-grid">
+          <div class="panel">
+            <h2>一句话记录</h2>
+            <label>
+              输入完成项或待办
+              <textarea id="inbox-input" placeholder="例如：完成通信系统软著申请；明天完成TR5 PPT修改；参加质量复盘会议"></textarea>
+            </label>
+            <div class="actions">
+              <button class="btn primary" id="parse-inbox" type="button">识别</button>
+              <button class="btn" id="confirm-inbox" type="button">确认入库</button>
+              <button class="btn full" id="sample-input" type="button">填入示例</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2>识别结果</h2>
+            <div class="candidate-list" id="inbox-result">
+              <div class="item">
+                <div class="item-title">等待输入</div>
+                <div class="muted small">系统会识别状态、日期、项目和来源，确认后进入日报。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>最近记录</h2>
+          <div class="record-list" id="record-list"></div>
+        </div>
+      </section>
+
+      <section class="section" id="report">
+        <div class="panel">
+          <h2>日报样式</h2>
+          <div class="segmented">
+            <button class="btn active" data-report-type="daily" type="button">日报</button>
+            <button class="btn" data-report-type="weekly" type="button">周报</button>
+              <button class="btn" data-report-type="monthly" type="button">月报</button>
+          </div>
+          <div class="form-block" style="display: grid; gap: 8px; margin-top: 10px">
+            <label>
+              报告日期
+              <input id="report-date" type="date" />
+            </label>
+            <label>
+              关键问题
+              <input id="risk-issue" placeholder="没有就留空" />
+            </label>
+            <label>
+              需协调
+              <input id="risk-coordination" placeholder="默认：暂无" />
+            </label>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="build-report" type="button">生成预览</button>
+            <button class="btn" id="copy-report" type="button">复制</button>
+            <button class="btn full" id="send-dingtalk" type="button">发送到钉钉</button>
+          </div>
+          <div class="status-line" id="send-status"></div>
+        </div>
+
+        <div class="panel">
+          <h2>待发送报告</h2>
+          <div class="report-preview" id="report-preview"></div>
+        </div>
+      </section>
+
+      <section class="section" id="more">
+        <div class="panel">
+          <h2>为什么这些功能先降级</h2>
+          <div class="more-list">
+            <details open>
+              <summary>事项库</summary>
+              <p>设计原因：后续要支持查历史、改错别字、补项目、撤回误识别。现在先不做主入口，只作为后台能力。</p>
+            </details>
+            <details>
+              <summary>看板</summary>
+              <p>设计原因：周报/月报和复盘需要统计完成量、延期、项目分布。当前你主要需要日报，所以先降级。</p>
+            </details>
+            <details>
+              <summary>设置</summary>
+              <p>设计原因：项目关键词、钉钉机器人、日报模板都需要配置。第一版可以由系统自动学习，页面设置先不打扰主流程。</p>
+            </details>
+            <details>
+              <summary>流程说明</summary>
+              <p>设计原因：原型阶段用于说明“输入 -> 识别 -> 入库 -> 生成日报”。产品定型后可以隐藏到帮助里。</p>
+            </details>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>当前归集规则</h2>
+          <div class="record-list">
+            <div class="item"><span class="item-title">通信系统</span><span class="muted small">通信系统、软著、软著申请</span></div>
+            <div class="item"><span class="item-title">多源火灾监测系统</span><span class="muted small">多源火灾、火灾监测、PPT大纲、TR5</span></div>
+            <div class="item"><span class="item-title">内部管理</span><span class="muted small">质量、复盘、会议、课程、评审</span></div>
+            <div class="item"><span class="item-title">自动化</span><span class="muted small">钉钉、机器人、提醒、Webhook、日报自动化</span></div>
+            <div class="item"><span class="item-title">客户交付</span><span class="muted small">客户、报价、方案、交付、部署、测试</span></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="主导航">
+      <button class="active" data-target="record" type="button">记录</button>
+      <button data-target="report" type="button">日报</button>
+      <button data-target="more" type="button">更多</button>
+    </nav>
+
+    <script>
+      let records = [];
+      let currentCandidates = [];
+      let activeReportType = "daily";
+      let apiAvailable = location.protocol !== "file:";
+      let dingtalkConfigured = false;
+
+      const titles = {
+        record: ["快速记录", "手机上也能用一句话记录完成项和待办。"],
+        report: ["日报预览", "按你给的日报格式生成今日进展、明日计划、风险与阻塞。"],
+        more: ["更多能力", "事项库、看板、设置和流程说明先作为二级能力保留。"],
+      };
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (char) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#039;",
+        })[char]);
+      }
+
+      function show(target) {
+        document.querySelectorAll(".section").forEach((section) => {
+          section.classList.toggle("active", section.id === target);
+        });
+        document.querySelectorAll(".bottom-nav button").forEach((button) => {
+          button.classList.toggle("active", button.dataset.target === target);
+        });
+        document.getElementById("page-title").textContent = titles[target][0];
+        document.getElementById("page-subtitle").textContent = titles[target][1];
+      }
+
+      function guessProject(text) {
+        if (/通信系统|软著|软著申请|解决方案/.test(text)) return "通信系统";
+        if (/多源火灾|火灾监测|PPT大纲|TR5/i.test(text)) return "多源火灾监测系统";
+        if (/钉钉|机器人|提醒|Webhook/i.test(text)) return "自动化";
+        if (/龙池|隧道|客户|报价|方案|交付|部署|测试/.test(text)) return "客户交付";
+        if (/质量|复盘|会议|评审|课程|分享/.test(text)) return "内部管理";
+        return "未归类";
+      }
+
+      function guessStatus(text) {
+        if (/明天|明日|待办|计划|需要|跟进|修改|调整|采购|部署|测试/.test(text)) return "待办";
+        if (/完成|参加|参会|开会|评审|分享/.test(text)) return "已完成";
+        return "已完成";
+      }
+
+      function guessDate(text, status) {
+        if (/昨天/.test(text)) return "昨天";
+        if (/明天|明日/.test(text)) return "明天";
+        if (/周五|星期五/.test(text)) return "周五";
+        return status === "待办" ? "明天" : "今天";
+      }
+
+      function statusClass(status) {
+        return status === "待办" ? "todo" : "done";
+      }
+
+      function splitInput(raw) {
+        return raw
+          .split(/[；;。.\n，,]/)
+          .map((item) => item.trim())
+          .filter(Boolean);
+      }
+
+      async function api(path, options = {}) {
+        const response = await fetch(path, {
+          headers: { "Content-Type": "application/json" },
+          ...options,
+        });
+        if (!response.ok) {
+          throw new Error(`请求失败：${response.status}`);
+        }
+        return response.json();
+      }
+
+      async function loadRecords() {
+        if (!apiAvailable) {
+          records = [
+            {
+              title: "完成多源火灾监测系统PPT大纲",
+              project: "多源火灾监测系统",
+              status: "已完成",
+              date: "2026-06-15",
+              source: "当前对话",
+            },
+            {
+              title: "完成通信系统软著申请",
+              project: "通信系统",
+              status: "已完成",
+              date: "2026-06-16",
+              source: "当前对话",
+            },
+            {
+              title: "参加质量复盘会议",
+              project: "内部管理",
+              status: "已完成",
+              date: "2026-06-16",
+              source: "当前对话",
+            },
+          ];
+          return;
+        }
+
+        try {
+          const data = await api("/api/records");
+          records = data.records || [];
+        } catch (error) {
+          apiAvailable = false;
+          console.warn(error);
+        }
+      }
+
+      function todayText() {
+        const date = new Date();
+        const offset = date.getTime() + 8 * 60 * 60 * 1000;
+        return new Date(offset).toISOString().slice(0, 10);
+      }
+
+      async function loadDingtalkStatus() {
+        if (!apiAvailable) return;
+        try {
+          const data = await api("/api/dingtalk/config-status");
+          dingtalkConfigured = Boolean(data.configured);
+          const status = document.getElementById("send-status");
+          status.textContent = dingtalkConfigured ? "钉钉 Webhook 已配置，报告可人工确认后发送。" : "尚未配置钉钉 Webhook，当前只能预览和复制。";
+          status.className = `status-line ${dingtalkConfigured ? "ok" : ""}`;
+        } catch (error) {
+          console.warn(error);
+        }
+      }
+
+      function renderCandidates() {
+        const container = document.getElementById("inbox-result");
+        if (!currentCandidates.length) {
+          container.innerHTML = `
+            <div class="item">
+              <div class="item-title">等待输入</div>
+              <div class="muted small">系统会识别状态、日期、项目和来源，确认后进入日报。</div>
+            </div>
+          `;
+          updateCounts();
+          return;
+        }
+
+        container.innerHTML = currentCandidates
+          .map((item) => `
+            <div class="item">
+              <div class="item-title">${escapeHtml(item.title)}</div>
+              <div class="chips">
+                <span class="chip ${statusClass(item.status)}">${escapeHtml(item.status)}</span>
+                <span class="chip">${escapeHtml(item.date)}</span>
+                <span class="chip">${escapeHtml(item.project)}</span>
+                <span class="chip">${escapeHtml(item.source)}</span>
+              </div>
+            </div>
+          `)
+          .join("");
+        updateCounts();
+      }
+
+      function renderRecords() {
+        const container = document.getElementById("record-list");
+        container.innerHTML = records
+          .slice()
+          .reverse()
+          .map((item) => `
+            <div class="item">
+              <div class="item-title">${escapeHtml(item.title)}</div>
+              <div class="chips">
+                <span class="chip ${statusClass(item.status)}">${escapeHtml(item.status)}</span>
+                <span class="chip">${escapeHtml(item.date)}</span>
+                <span class="chip">${escapeHtml(item.project)}</span>
+              </div>
+            </div>
+          `)
+          .join("");
+        updateCounts();
+      }
+
+      function updateCounts() {
+        document.getElementById("done-count").textContent = records.filter((item) => item.status === "已完成" && item.date !== "昨天").length;
+        document.getElementById("todo-count").textContent = records.filter((item) => item.status === "待办").length;
+        document.getElementById("candidate-count").textContent = currentCandidates.length;
+      }
+
+      function addDays(dateText, days) {
+        const [year, month, day] = dateText.split("-").map(Number);
+        const date = new Date(Date.UTC(year, month - 1, day));
+        date.setUTCDate(date.getUTCDate() + days);
+        return [
+          date.getUTCFullYear(),
+          String(date.getUTCMonth() + 1).padStart(2, "0"),
+          String(date.getUTCDate()).padStart(2, "0"),
+        ].join("-");
+      }
+
+      function riskPayload() {
+        return {
+          keyIssue: document.getElementById("risk-issue").value.trim(),
+          coordination: document.getElementById("risk-coordination").value.trim() || "暂无",
+        };
+      }
+
+      function buildDailyReport() {
+        const date = document.getElementById("report-date").value || todayText();
+        const done = records.filter((item) => item.status === "已完成" && item.date === date);
+        const todos = records.filter((item) => item.status === "待办" && item.date === addDays(date, 1));
+        const risk = riskPayload();
+        const doneLines = done.length
+          ? done.map((item, index) => `${index + 1}. ${item.title}。`).join("\n")
+          : "1. 暂无。";
+        const todoLines = todos.length
+          ? todos.map((item, index) => `${index + 1}. ${item.title.replace(/^明天|^明日/, "")}。`).join("\n")
+          : "1. 暂无。";
+
+        return `【一、今日进展
+${doneLines}
+二、明日计划
+${todoLines}
+三、风险与阻塞
+
+1. 关键问题：${risk.keyIssue}
+2. 需协调：${risk.coordination}】`;
+      }
+
+      function buildWeeklyReport() {
+        return `【一、本周进展
+${records.filter((item) => item.status === "已完成").map((item, index) => `${index + 1}. ${item.title}。`).join("\n") || "1. 暂无。"}
+二、下周计划
+${records.filter((item) => item.status === "待办").map((item, index) => `${index + 1}. ${item.title}。`).join("\n") || "1. 暂无。"}
+三、风险与阻塞
+
+1. 关键问题：
+2. 需协调：暂无】`;
+      }
+
+      function buildMonthlyReport() {
+        return `【一、本月进展
+${records.filter((item) => item.status === "已完成").map((item, index) => `${index + 1}. ${item.title}。`).join("\n") || "1. 暂无。"}
+二、下月计划
+${records.filter((item) => item.status === "待办").map((item, index) => `${index + 1}. ${item.title}。`).join("\n") || "1. 暂无。"}
+三、风险与阻塞
+
+1. 关键问题：
+2. 需协调：暂无】`;
+      }
+
+      async function buildReport() {
+        const preview = document.getElementById("report-preview");
+        if (apiAvailable) {
+          try {
+            const data = await api("/api/report", {
+              method: "POST",
+              body: JSON.stringify({
+                type: activeReportType,
+                date: document.getElementById("report-date").value || todayText(),
+                risk: riskPayload(),
+              }),
+            });
+            preview.textContent = data.report;
+            return;
+          } catch (error) {
+            console.warn(error);
+          }
+        }
+
+        if (activeReportType === "weekly") preview.textContent = buildWeeklyReport();
+        else if (activeReportType === "monthly") preview.textContent = buildMonthlyReport();
+        else preview.textContent = buildDailyReport();
+      }
+
+      document.querySelectorAll("[data-target]").forEach((button) => {
+        button.addEventListener("click", () => show(button.dataset.target));
+      });
+
+      document.querySelectorAll("[data-report-type]").forEach((button) => {
+        button.addEventListener("click", () => {
+          activeReportType = button.dataset.reportType;
+          document.querySelectorAll("[data-report-type]").forEach((item) => item.classList.toggle("active", item === button));
+          buildReport();
+        });
+      });
+
+      document.getElementById("sample-input").addEventListener("click", () => {
+        document.getElementById("inbox-input").value = "完成通信系统&多源火灾监测系统TR5 PPT修改；明天完成龙池隧道系统部署并测试基础功能；参加研发部AI分享课程";
+      });
+
+      document.getElementById("parse-inbox").addEventListener("click", async () => {
+        const raw = document.getElementById("inbox-input").value.trim();
+        if (apiAvailable) {
+          try {
+            const data = await api("/api/parse", {
+              method: "POST",
+              body: JSON.stringify({ text: raw || "完成通信系统软著申请", source: "当前对话" }),
+            });
+            currentCandidates = data.candidates || [];
+            renderCandidates();
+            return;
+          } catch (error) {
+            console.warn(error);
+          }
+        }
+
+        currentCandidates = splitInput(raw || "完成通信系统软著申请").map((title) => {
+          const status = guessStatus(title);
+          return {
+            title,
+            status,
+            date: guessDate(title, status),
+            project: guessProject(title),
+            source: /钉钉/.test(title) ? "钉钉机器人" : "当前对话",
+          };
+        });
+        renderCandidates();
+      });
+
+      document.getElementById("confirm-inbox").addEventListener("click", async () => {
+        if (!currentCandidates.length) return;
+        if (apiAvailable) {
+          try {
+            const data = await api("/api/records", {
+              method: "POST",
+              body: JSON.stringify({ records: currentCandidates }),
+            });
+            records = data.records || records;
+          } catch (error) {
+            console.warn(error);
+            records.push(...currentCandidates);
+          }
+        } else {
+          records.push(...currentCandidates);
+        }
+        currentCandidates = [];
+        document.getElementById("inbox-input").value = "";
+        renderCandidates();
+        renderRecords();
+        buildReport();
+      });
+
+      document.getElementById("build-report").addEventListener("click", buildReport);
+
+      document.getElementById("copy-report").addEventListener("click", async () => {
+        const text = document.getElementById("report-preview").textContent;
+        try {
+          await navigator.clipboard.writeText(text);
+          alert("报告已复制");
+        } catch {
+          alert("当前浏览器不允许自动复制，请手动选择报告文本复制");
+        }
+      });
+
+      document.getElementById("send-dingtalk").addEventListener("click", async () => {
+        const status = document.getElementById("send-status");
+        const report = document.getElementById("report-preview").textContent.trim();
+        if (!report) {
+          status.textContent = "请先生成报告预览。";
+          status.className = "status-line error";
+          return;
+        }
+        if (!apiAvailable) {
+          status.textContent = "当前是本地文件模式，无法发送到钉钉。";
+          status.className = "status-line error";
+          return;
+        }
+        try {
+          status.textContent = "正在发送到钉钉...";
+          status.className = "status-line";
+          const data = await api("/api/dingtalk/send-report", {
+            method: "POST",
+            body: JSON.stringify({
+              title: activeReportType === "daily" ? "工作日报" : activeReportType === "weekly" ? "工作周报" : "工作月报",
+              report,
+            }),
+          });
+          status.textContent = data.ok ? "已发送到钉钉。" : "钉钉返回异常，请检查配置。";
+          status.className = `status-line ${data.ok ? "ok" : "error"}`;
+        } catch (error) {
+          status.textContent = error.message || "发送失败，请检查钉钉 Webhook 配置。";
+          status.className = "status-line error";
+        }
+      });
+
+      async function init() {
+        document.getElementById("report-date").value = todayText();
+        await loadRecords();
+        await loadDingtalkStatus();
+        renderRecords();
+        renderCandidates();
+        buildReport();
+      }
+
+      init();
+    </script>
+  </body>
+</html>
