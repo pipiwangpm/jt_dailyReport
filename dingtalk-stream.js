@@ -53,7 +53,7 @@ async function postToLocalIngest(localIngestUrl, text, rawMessage) {
 }
 
 async function main() {
-  const { DWClient, EventAck, TOPIC_ROBOT } = await import("dingtalk-stream");
+  const { DWClient, TOPIC_ROBOT } = await import("dingtalk-stream");
   const config = readConfig();
   const client = new DWClient({
     clientId: config.clientId,
@@ -62,32 +62,31 @@ async function main() {
     debug: config.debug,
   });
 
-  client.config.subscriptions = [{ type: "EVENT", topic: TOPIC_ROBOT }];
-
-  client.registerAllEventListener((event) => {
+  client.registerCallbackListener(TOPIC_ROBOT, async (event) => {
     let message;
     try {
       message = JSON.parse(event.data || "{}");
     } catch (error) {
       console.warn("钉钉消息解析失败：", error.message);
-      return { status: EventAck.SUCCESS, message: "ignored invalid message" };
+      client.socketCallBackResponse(event.headers.messageId, { status: "ignored invalid message" });
+      return;
     }
 
     const text = parseDingtalkText(message);
     if (!text) {
       console.info("收到非文本钉钉消息，已忽略。");
-      return { status: EventAck.SUCCESS, message: "ignored non-text message" };
+      client.socketCallBackResponse(event.headers.messageId, { status: "ignored non-text message" });
+      return;
     }
 
-    postToLocalIngest(config.localIngestUrl, text, message)
-      .then((result) => {
-        console.info(`钉钉消息已入库：${result.created.length} 条`);
-      })
-      .catch((error) => {
-        console.error("钉钉消息写入本地失败：", error.message);
-      });
-
-    return { status: EventAck.SUCCESS, message: "received" };
+    try {
+      const result = await postToLocalIngest(config.localIngestUrl, text, message);
+      console.info(`钉钉消息已入库：${result.created.length} 条`);
+      client.socketCallBackResponse(event.headers.messageId, { status: "received", created: result.created.length });
+    } catch (error) {
+      console.error("钉钉消息写入本地失败：", error.message);
+      client.socketCallBackResponse(event.headers.messageId, { status: "local ingest failed" });
+    }
   });
 
   console.info("正在连接钉钉 Stream，请保持本地日报服务已启动。");
